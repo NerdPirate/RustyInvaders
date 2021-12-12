@@ -13,21 +13,23 @@ struct Position {
 /// rows is the number of y indices
 /// cols is the number of x indices
 #[derive(Debug)]
-struct Array2D<T> {
+struct Array2D<T: Copy> {
     elements: Vec<T>,
     rows: usize,
     cols: usize,
 }
 
 impl<T: Copy> Array2D<T> {
-    fn new(cols: usize, rows: usize, default: T) -> Self {
+    fn new(cols: usize, rows: usize, default: (bool, T)) -> Self {
         let mut temp = Self {
             cols: cols,
             rows: rows,
             elements: Vec::<T>::with_capacity(rows * cols),
         };
-        for _ in 0..rows*cols {
-            temp.elements.push(default)
+        if default.0 {
+            for _ in 0..rows*cols {
+                temp.elements.push(default.1)
+            }
         }
         let temp2 = temp;
         temp2
@@ -38,7 +40,18 @@ impl<T: Copy> Array2D<T> {
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Array2D<T> {
+impl<T: Copy> Clone for Array2D<T> {
+    fn clone(&self) -> Self {
+        let mut copy = Array2D::<T>::new(self.cols, self.rows, (false, self.elements[0]));
+        for i in 0..self.cols*self.rows {
+            // TODO Figure out how to enforce self.elements is Vec<T: Copy> and not just Vec<T>
+            copy.elements.push(self.elements[i]);
+        }
+        copy
+    }
+}
+
+impl<T: fmt::Display + Copy> fmt::Display for Array2D<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "\n[ ")?;
         for i in 0..self.rows*self.cols {
@@ -86,15 +99,37 @@ mod tests {
         let cols = 6;
         let rows = 3;
         let default = 91;
-        let array = Array2D::<u8>::new(cols, rows, default);
+        let array = Array2D::<u8>::new(cols, rows, (true, default));
         for i in 0..cols*rows {
             assert_eq!(array.elements[i], default);
         }
     }
 
     #[test]
+    #[should_panic]
+    fn test_array2d_new_nodefault_panic() {
+        let cols = 6;
+        let rows = 3;
+        let default = 91;
+        let array = Array2D::<u8>::new(cols, rows, (false, default));
+        array.elements[0];
+    }
+
+    #[test]
+    fn test_array2d_clone() {
+        let cols = 6;
+        let rows = 3;
+        let default = 91;
+        let array = Array2D::<u8>::new(cols, rows, (true, default));
+        let mut array2 = array.clone();
+        array2[Position{x: 4, y: 2}] = 21;
+        assert_eq!(array[Position{x: 4, y: 2}], default);
+        assert_eq!(array2[Position{x: 4, y: 2}], 21);
+    }
+
+    #[test]
     fn test_array2d_index() {
-        let mut array = Array2D::<u8>::new(14, 2, 7);
+        let mut array = Array2D::<u8>::new(14, 2, (true, 7));
         array.elements[13] = 19;
         array.elements[14] = 4;
         assert_eq!(array[Position{x: 13, y: 0}], 19);
@@ -104,13 +139,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_array2d_index_panic() {
-        let array = Array2D::<u8>::new(14, 2, 7);
+        let array = Array2D::<u8>::new(14, 2, (true, 7));
         array[Position{x: 14, y: 0}];
     }
 
     #[test]
     fn test_array2d_index_mut() {
-        let mut array = Array2D::<u8>::new(3, 7, 0);
+        let mut array = Array2D::<u8>::new(3, 7, (true, 0));
         array[Position{x: 0, y: 2}] = 5;
         array[Position{x: 2, y: 0}] = 1;
         array[Position{x: 2, y: 5}] = 9;
@@ -124,7 +159,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_array2d_index_mut_panic() {
-        let mut array = Array2D::<u8>::new(14, 2, 7);
+        let mut array = Array2D::<u8>::new(14, 2, (true, 7));
         array[Position{x: 14, y: 0}] = 5;
     }
 }

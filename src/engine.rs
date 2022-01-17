@@ -13,11 +13,22 @@ use std::ops::{Index, IndexMut};
 //use std::path::Path;
 use serde_json::Value;
 
-
+/// Represents position on the game board
+/// 
 /// 0, 0 are the x, y coordinates indicating the top-leftmost position
 pub struct Position {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
+}
+
+impl Position {
+    pub fn get_x(&self) -> usize {
+        self.x
+    }
+
+    pub fn get_y(&self) -> usize {
+        self.y
+    }
 }
 
 /// A simple 2d array
@@ -32,7 +43,7 @@ pub struct Array2D<T: Copy> {
 }
 
 impl<T: Copy> Array2D<T> {
-    fn new(cols: usize, rows: usize, default: (bool, T)) -> Self {
+    pub fn new(cols: usize, rows: usize, default: (bool, T)) -> Self {
         let mut temp = Self {
             cols: cols,
             rows: rows,
@@ -47,8 +58,20 @@ impl<T: Copy> Array2D<T> {
         temp2
     }
 
-    fn in_range(&self, index: &Position) -> bool {
+    pub fn in_range(&self, index: &Position) -> bool {
         index.x < self.cols && index.y < self.rows
+    }
+
+    pub fn get_elements(&self) -> &Vec<T> {
+        &self.elements
+    }
+
+    pub fn get_rows(&self) -> usize {
+        self.rows
+    }
+
+    pub fn get_cols(&self) -> usize {
+        self.cols
     }
 }
 
@@ -162,13 +185,24 @@ impl Bitmap {
             _ => panic!("Did not find data"),
         };
 
-        let bmp = bmp;
         bmp
     }
 
     pub fn build_from_file(path: &str) -> Self {
         let data = fs::read_to_string(path).expect("Could not read file");
         Bitmap::build_from_str(&data)
+    }
+
+    pub fn get_bits(&self) -> &Array2D<u8> {
+        &self.bits
+    }
+
+    pub fn get_fg(&self) -> u8 {
+        self.foreground
+    }
+
+    pub fn get_bg(&self) -> u8 {
+        self.background
     }
 }
 

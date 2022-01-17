@@ -9,6 +9,7 @@
 use crate::engine::Bitmap;
 
 mod engine;
+mod game;
 
 
 fn main() {

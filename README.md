@@ -4,5 +4,12 @@
 Having some fun learning Rust. I've implemented a Space Invaders clone in C years and years ago. Trying to do it again.
 
 ## Goals
-Rather than doing things the "right" way and using crates, I'm trying to write as much of the code as possible myself.
-Maybe I'll come back later and fix things up with crates that can do a better job than I can.
+Learn Rust, I guess...
+
+## Legal
+Copyright (c) 2021-2022, Eric Mackay
+
+All rights reserved.
+
+This project is licensed under the BSD-style license found in the
+LICENSE file in the root directory of this source tree.

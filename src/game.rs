@@ -2,11 +2,12 @@ use std::fmt;
 use std::fs;
 use crate::engine;
 //use std::ops::{Index, IndexMut};
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 
 
 /// Represents an individual entity in the game
 /// including their shape
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Sprite {
     pixels: engine::Bitmap,
     pos: engine::Position,
@@ -24,29 +25,12 @@ impl Sprite {
     }
 
     pub fn build_from_str(data: &str) -> Self {
-        let mut local_sprite = Self {
-            pixels: engine::Bitmap::build_from_str(data),
-            pos: engine::Position{ x: 0, y: 0},
-        };
-        let v: Value = serde_json::from_str(&data).expect("Could not parse data");
-        local_sprite.pos = match &v["pos"] {
-            Value::Object(p) => engine::Position{
-                x: match p.get("x").expect("Could not find x position") {
-                    Value::Number(px) => px.as_u64().expect("Could not parse x position into a number").try_into().unwrap(),
-                    _ => panic!("Did not find a number for the x position"),
-                },
-                y: match p.get("y").expect("Could not find y position") {
-                    Value::Number(py) => py.as_u64().expect("Could not parse y position into a number").try_into().unwrap(),
-                    _ => panic!("Did not find a number for the y position"),
-                },
-            },
-            _ => panic!("Did not find a map for the position"),
-        };
-        local_sprite
+        let sp: Sprite = serde_json::from_str(&data).expect("Could not deserialize Sprite");
+        sp
     }
 
     pub fn build_from_file(path: &str) -> Self {
-        let data = fs::read_to_string(path).expect("Could not read file");
+        let data = fs::read_to_string(path).expect("Could not read Sprite file");
         Sprite::build_from_str(&data)
     }
 }
@@ -61,6 +45,7 @@ impl fmt::Display for Sprite {
 
 /// Represents the game board, all the sprites, and the actions that
 /// can be taken by each of the sprites
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Board {
     sprites: Vec<Sprite>,
     screen: engine::Bitmap,
@@ -72,6 +57,17 @@ impl Board {
             sprites: Vec::<Sprite>::new(),
             screen: engine::Bitmap::new(cols, rows, fg, bg),
         }
+    }
+
+    // TODO Write tests for these, which also helps document the expected JSON format
+    pub fn build_from_str(data: &str) -> Self {
+        let b: Board = serde_json::from_str(&data).expect("Could not deserialize Board");
+        b
+    }
+
+    pub fn build_from_file(path: &str) -> Self {
+        let data = fs::read_to_string(path).expect("Could not read Board file");
+        Board::build_from_str(&data)
     }
 }
 
@@ -116,14 +112,18 @@ mod tests {
     fn test_sprite_build_str() {
     	let data = r#"
         {
-            "fg": 4,
-            "bg": 1,
-            "cols": 3,
-            "rows": 2,
-            "data": [
-                "414",
-                "114"
-            ],
+            "pixels": {
+                "foreground": 4,
+                "background": 1,
+                "data": {
+                    "rows": 2,
+                    "cols": 3,
+                    "elements": [
+                        4, 1, 4,
+                        1, 1, 4
+                    ]
+                }
+            },
             "pos": {
             	"x": 2,
             	"y": 5
@@ -133,14 +133,14 @@ mod tests {
         let sp = Sprite::build_from_str(data);
         assert_eq!(sp.pixels.get_fg(), 4);
         assert_eq!(sp.pixels.get_bg(), 1);
-        assert_eq!(sp.pixels.get_bits().get_cols(), 3);
-        assert_eq!(sp.pixels.get_bits().get_rows(), 2);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 0, y: 0}], 4);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 1, y: 0}], 1);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 2, y: 0}], 4);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 0, y: 1}], 1);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 1, y: 1}], 1);
-        assert_eq!(sp.pixels.get_bits()[engine::Position{x: 2, y: 1}], 4);
+        assert_eq!(sp.pixels.get_data().get_cols(), 3);
+        assert_eq!(sp.pixels.get_data().get_rows(), 2);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 0, y: 0}], 4);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 1, y: 0}], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 2, y: 0}], 4);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 0, y: 1}], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 1, y: 1}], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position{x: 2, y: 1}], 4);
         assert_eq!(sp.pos.get_x(), 2);
         assert_eq!(sp.pos.get_y(), 5);
     }

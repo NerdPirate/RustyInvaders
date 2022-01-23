@@ -11,11 +11,13 @@ use std::fs;
 //use std::io::prelude::*;
 use std::ops::{Index, IndexMut};
 //use std::path::Path;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Represents position on the game board
 /// 
 /// 0, 0 are the x, y coordinates indicating the top-leftmost position
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -35,7 +37,7 @@ impl Position {
 ///
 /// rows is the number of y indices
 /// cols is the number of x indices
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Array2D<T: Copy> {
     elements: Vec<T>,
     rows: usize,
@@ -130,9 +132,9 @@ impl<T: Copy> IndexMut<Position> for Array2D<T> {
 ///
 /// rows is the number of y indices
 /// cols is the number of x indices
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Bitmap {
-    bits: Array2D<u8>,
+    data: Array2D<u8>,
     foreground: u8,
     background: u8,
 }
@@ -140,61 +142,25 @@ pub struct Bitmap {
 impl Bitmap {
     pub fn new(cols: usize, rows: usize, foreground: u8, background: u8) -> Self {
         Self {
-            bits: Array2D::<u8>::new(cols, rows, (true, background)),
+            data: Array2D::<u8>::new(cols, rows, (true, background)),
             foreground: foreground,
             background: background,
         }
     }
 
     pub fn build_from_str(data: &str) -> Self {
-        let v: Value = serde_json::from_str(&data).expect("Could not parse data");
-        let fg: u8 = match &v["fg"] {
-            Value::Number(fg) => fg.as_u64().expect("Could not parse fg into numbers").try_into().unwrap(),
-            _ => panic!("Did not find a number for the fg key"),
-        };
-        let bg: u8 = match &v["bg"] {
-            Value::Number(bg) => bg.as_u64().expect("Could not parse bg into numbers").try_into().unwrap(),
-            _ => panic!("Did not find a number for the bg key"),
-        };
-        let cols: usize = match &v["cols"] {
-            Value::Number(cols) => cols.as_u64().expect("Could not parse cols into numbers").try_into().unwrap(),
-            _ => panic!("Did not find a number for the cols key"),
-        };
-        let rows: usize = match &v["rows"] {
-            Value::Number(rows) => rows.as_u64().expect("Could not parse rows into numbers").try_into().unwrap(),
-            _ => panic!("Did not find a number for the rows key"),
-        };
-
-        let mut bmp = Bitmap::new(cols, rows, fg, bg);
-
-        match &v["data"] {
-            Value::Array(arr) => {
-                // TODO Add some error handling for rows == number of array elements
-                for i in 0..rows {
-                    match &arr[i] {
-                        Value::String(line) => {
-                            // TODO Add some error handling for cols == line length
-                            for (j, c) in line.chars().enumerate() {
-                                bmp.bits[Position{x: j, y: i}] = c.to_string().parse().expect("Could not parse char in line to u8");
-                            }
-                        },
-                        _ => panic!("Could not recognize entry in array of data")
-                    }
-                }
-            },
-            _ => panic!("Did not find data"),
-        };
-
+        // TODO Figure out how to error-check that elements = rows * columns
+        let bmp: Bitmap = serde_json::from_str(&data).expect("Could not deserialize Bitmap");
         bmp
     }
 
     pub fn build_from_file(path: &str) -> Self {
-        let data = fs::read_to_string(path).expect("Could not read file");
+        let data = fs::read_to_string(path).expect("Could not read Bitmap file");
         Bitmap::build_from_str(&data)
     }
 
-    pub fn get_bits(&self) -> &Array2D<u8> {
-        &self.bits
+    pub fn get_data(&self) -> &Array2D<u8> {
+        &self.data
     }
 
     pub fn get_fg(&self) -> u8 {
@@ -208,15 +174,15 @@ impl Bitmap {
 
 impl fmt::Display for Bitmap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for _ in 0..(self.bits.cols+2) {
+        for _ in 0..(self.data.cols+2) {
             write!(f, "-")?;
         }
         write!(f, "\n|")?;
-        for i in 0..self.bits.rows*self.bits.cols {
-            if i != 0 && (i % self.bits.cols) == 0 {
+        for i in 0..self.data.rows*self.data.cols {
+            if i != 0 && (i % self.data.cols) == 0 {
                 write!(f, "|\n|")?;
             }
-            let bit = &self.bits.elements[i];
+            let bit = &self.data.elements[i];
             if bit == &self.foreground {
                 write!(f, "#")?;
             } else if bit == &self.background {
@@ -226,7 +192,7 @@ impl fmt::Display for Bitmap {
             }
         }
         write!(f, "|\n")?;
-        for _ in 0..(self.bits.cols+2) {
+        for _ in 0..(self.data.cols+2) {
             write!(f, "-")?;
         }
         write!(f, "\n")?;
@@ -330,26 +296,47 @@ mod tests {
     fn test_bitmap_build_str() {
         let data = r#"
         {
-            "fg": 4,
-            "bg": 1,
-            "cols": 3,
-            "rows": 2,
-            "data": [
-                "414",
-                "114"
-            ]
+            "foreground": 4,
+            "background": 1,
+            "data": {
+                "rows": 2,
+                "cols": 3,
+                "elements": [
+                    4, 1, 4,
+                    1, 1, 4
+                ]
+            }
         }
         "#;
         let bm = Bitmap::build_from_str(data);
         assert_eq!(bm.foreground, 4);
         assert_eq!(bm.background, 1);
-        assert_eq!(bm.bits.cols, 3);
-        assert_eq!(bm.bits.rows, 2);
-        assert_eq!(bm.bits[Position{x: 0, y: 0}], 4);
-        assert_eq!(bm.bits[Position{x: 1, y: 0}], 1);
-        assert_eq!(bm.bits[Position{x: 2, y: 0}], 4);
-        assert_eq!(bm.bits[Position{x: 0, y: 1}], 1);
-        assert_eq!(bm.bits[Position{x: 1, y: 1}], 1);
-        assert_eq!(bm.bits[Position{x: 2, y: 1}], 4);
+        assert_eq!(bm.data.cols, 3);
+        assert_eq!(bm.data.rows, 2);
+        assert_eq!(bm.data[Position{x: 0, y: 0}], 4);
+        assert_eq!(bm.data[Position{x: 1, y: 0}], 1);
+        assert_eq!(bm.data[Position{x: 2, y: 0}], 4);
+        assert_eq!(bm.data[Position{x: 0, y: 1}], 1);
+        assert_eq!(bm.data[Position{x: 1, y: 1}], 1);
+        assert_eq!(bm.data[Position{x: 2, y: 1}], 4);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bitmap_build_str_fail() {
+        let data = r#"
+        {
+            "foreground": 4,
+            "data": {
+                "rows": 2,
+                "cols": 3,
+                "elements": [
+                    4, 1, 4,
+                    1, 1, 4
+                ]
+            }
+        }
+        "#;
+        let _bm = Bitmap::build_from_str(data);
     }
 }

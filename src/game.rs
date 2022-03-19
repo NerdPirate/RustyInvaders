@@ -1,17 +1,16 @@
 /********************************************************************
 * Copyright (c) 2021-2022, Eric Mackay
 * All rights reserved.
-* 
+*
 * This source code is licensed under the BSD-style license found in the
 * LICENSE file in the root directory of this source tree.
 ********************************************************************/
 
+use crate::engine;
 use std::fmt;
 use std::fs;
-use crate::engine;
 //use std::ops::{Index, IndexMut};
 use serde::{Deserialize, Serialize};
-
 
 /// Represents an individual entity in the game
 /// including their shape
@@ -27,7 +26,7 @@ impl Sprite {
             pixels: engine::Bitmap::new(cols, rows, fg, bg),
             pos: match pos {
                 Some(p) => p,
-                None => engine::Position{ x: 0, y: 0 },
+                None => engine::Position { x: 0, y: 0 },
             },
         }
     }
@@ -48,8 +47,6 @@ impl fmt::Display for Sprite {
         self.pixels.fmt(f)
     }
 }
-
-
 
 /// Represents the game board, all the sprites, and the actions that
 /// can be taken by each of the sprites
@@ -98,7 +95,7 @@ mod tests {
         let rows = 3;
         let bg = 0;
         let fg = 1;
-        let pos = Some(engine::Position{ x: 2, y: 3 });
+        let pos = Some(engine::Position { x: 2, y: 3 });
         let s: Sprite = Sprite::new(cols, rows, fg, bg, pos);
         assert_eq!(s.pos.get_x(), 2);
         assert_eq!(s.pos.get_y(), 3);
@@ -118,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_sprite_build_str() {
-    	let data = r#"
+        let data = r#"
         {
             "pixels": {
                 "foreground": 4,
@@ -133,8 +130,8 @@ mod tests {
                 }
             },
             "pos": {
-            	"x": 2,
-            	"y": 5
+                "x": 2,
+                "y": 5
             }
         }
         "#;
@@ -143,12 +140,12 @@ mod tests {
         assert_eq!(sp.pixels.get_bg(), 1);
         assert_eq!(sp.pixels.get_data().get_cols(), 3);
         assert_eq!(sp.pixels.get_data().get_rows(), 2);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 0, y: 0}], 4);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 1, y: 0}], 1);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 2, y: 0}], 4);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 0, y: 1}], 1);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 1, y: 1}], 1);
-        assert_eq!(sp.pixels.get_data()[engine::Position{x: 2, y: 1}], 4);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 0, y: 0 }], 4);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 1, y: 0 }], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 2, y: 0 }], 4);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 0, y: 1 }], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 1, y: 1 }], 1);
+        assert_eq!(sp.pixels.get_data()[engine::Position { x: 2, y: 1 }], 4);
         assert_eq!(sp.pos.get_x(), 2);
         assert_eq!(sp.pos.get_y(), 5);
     }
@@ -161,6 +158,85 @@ mod tests {
         let rows = 3;
         let bg = 0;
         let fg = 1;
-        let _b: Board = Board::new(cols, rows, bg, fg);
+        let b: Board = Board::new(cols, rows, bg, fg);
+        assert_eq!(b.sprites.len(), 0);
+        let _ = serde_json::to_string(&b).expect("Could not stringify");
+        // TODO More asserts
+    }
+
+    #[test]
+    fn test_board_new_push_sprites() {
+        let cols = 6;
+        let rows = 3;
+        let bg = 0;
+        let fg = 1;
+        let mut b: Board = Board::new(cols, rows, bg, fg);
+        let _ = &b.sprites.push(Sprite::new(6, 3, 4, 5, None));
+        let _ = &b.sprites.push(Sprite::new(4, 2, 8, 7, None));
+        assert_eq!(b.sprites.len(), 2);
+        let _ = serde_json::to_string(&b).expect("Could not stringify");
+        // TODO More asserts
+    }
+
+    #[test]
+    fn test_board_build_str() {
+        let data = r#"
+        {
+            "sprites": [
+                {
+                    "pixels": {
+                        "foreground": 4,
+                        "background": 1,
+                        "data": {
+                            "rows": 2,
+                            "cols": 3,
+                            "elements": [
+                                1, 4, 1,
+                                1, 4, 1
+                            ]
+                        }
+                    },
+                    "pos": {
+                        "x": 0,
+                        "y": 0
+                    }
+                },
+                {
+                    "pixels": {
+                        "foreground": 6,
+                        "background": 7,
+                        "data": {
+                            "rows": 2,
+                            "cols": 3,
+                            "elements": [
+                                7, 7, 6,
+                                6, 7, 6
+                            ]
+                        }
+                    },
+                    "pos": {
+                        "x": 0,
+                        "y": 2
+                    }
+                }
+            ],
+            "screen": {
+                "foreground": 1,
+                "background": 0,
+                "data": {
+                    "rows": 4,
+                    "cols": 3,
+                    "elements": [
+                        0, 1, 0,
+                        1, 1, 0,
+                        1, 0, 0,
+                        1, 0, 0
+                    ]
+                }
+            }
+        }
+        "#;
+        let _ = Board::build_from_str(data);
+        // TODO More asserts
     }
 }

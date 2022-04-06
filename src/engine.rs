@@ -164,6 +164,17 @@ impl Bitmap {
     pub fn get_bg(&self) -> u8 {
         self.background
     }
+
+    // Naive implementation of setting all positions to bg value
+    pub fn reset(&mut self) {
+        let rows = self.data.get_rows();
+        let cols = self.data.get_cols();
+        for y_in in 0..rows {
+            for x_in in 0..cols {
+                self.data[Position { x: x_in, y: y_in }] = self.background
+            }
+        }
+    }
 }
 
 impl fmt::Display for Bitmap {
@@ -330,6 +341,42 @@ mod tests {
             }
         }
         "#;
+        // Missing background, so we should fail to build
         let _bm = Bitmap::build_from_str(data);
+    }
+
+    #[test]
+    fn test_bitmap_reset() {
+        let data = r#"
+        {
+            "foreground": 4,
+            "background": 1,
+            "data": {
+                "rows": 2,
+                "cols": 3,
+                "elements": [
+                    4, 1, 4,
+                    1, 1, 4
+                ]
+            }
+        }
+        "#;
+        let mut bm = Bitmap::build_from_str(data);
+        let fg = bm.foreground;
+        let bg = bm.background;
+        let rows = bm.data.rows;
+        let cols = bm.data.cols;
+        bm.reset();
+        // Make sure size and values not modified
+        assert_eq!(bm.foreground, fg);
+        assert_eq!(bm.background, bg);
+        assert_eq!(bm.data.cols, cols);
+        assert_eq!(bm.data.rows, rows);
+        // Check everything is set back to bg
+        for y_in in 0..rows {
+            for x_in in 0..cols {
+                assert_eq!(bm.data[Position { x: x_in, y: y_in }], bg);
+            }
+        }
     }
 }

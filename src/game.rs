@@ -64,7 +64,6 @@ impl Board {
         }
     }
 
-    // TODO Write tests for these, which also helps document the expected JSON format
     pub fn build_from_str(data: &str) -> Self {
         let b: Board = serde_json::from_str(&data).expect("Could not deserialize Board");
         b
@@ -73,6 +72,17 @@ impl Board {
     pub fn build_from_file(path: &str) -> Self {
         let data = fs::read_to_string(path).expect("Could not read Board file");
         Board::build_from_str(&data)
+    }
+
+    // Brute-force rescan of entire board (or maybe rescan just Sprites)
+    // Pixels occupied by a Sprite are colored fg, and rest bg
+    //
+    // TODO Likely will be a major performance bottleneck in future
+    // TODO Better idea in future is to only look at positions that
+    //  a Sprite previously occupied
+    pub fn update(&mut self) {
+        self.screen.reset()
+        // TODO update stuff
     }
 }
 
@@ -156,12 +166,16 @@ mod tests {
     fn test_board_new() {
         let cols = 6;
         let rows = 3;
-        let bg = 0;
-        let fg = 1;
-        let b: Board = Board::new(cols, rows, bg, fg);
+        let bg = 4;
+        let fg = 9;
+        let b: Board = Board::new(cols, rows, fg, bg);
         assert_eq!(b.sprites.len(), 0);
         let _ = serde_json::to_string(&b).expect("Could not stringify");
-        // TODO More asserts
+        for y_in in 0..rows {
+            for x_in in 0..cols {
+                assert_eq!(b.screen.get_data()[engine::Position { x: x_in, y: y_in }], bg);
+            }
+        }
     }
 
     #[test]
@@ -170,12 +184,14 @@ mod tests {
         let rows = 3;
         let bg = 0;
         let fg = 1;
-        let mut b: Board = Board::new(cols, rows, bg, fg);
+        let mut b: Board = Board::new(cols, rows, fg, bg);
         let _ = &b.sprites.push(Sprite::new(6, 3, 4, 5, None));
         let _ = &b.sprites.push(Sprite::new(4, 2, 8, 7, None));
         assert_eq!(b.sprites.len(), 2);
         let _ = serde_json::to_string(&b).expect("Could not stringify");
+        b.update()
         // TODO More asserts
+        // TODO Check new fg and bg values
     }
 
     #[test]
@@ -237,6 +253,11 @@ mod tests {
         }
         "#;
         let _ = Board::build_from_str(data);
+        // TODO More asserts
+    }
+
+    #[test]
+    fn test_board_update() {
         // TODO More asserts
     }
 }

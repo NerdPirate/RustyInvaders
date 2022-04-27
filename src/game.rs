@@ -48,6 +48,13 @@ impl fmt::Display for Sprite {
     }
 }
 
+#[derive(Debug)]
+pub enum BoardError {
+    PixelOccupied,
+    PosOccupied,
+    OutOfRange,
+}
+
 /// Represents the game board, all the sprites, and the actions that
 /// can be taken by each of the sprites
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,6 +81,19 @@ impl Board {
         Board::build_from_str(&data)
     }
 
+    pub fn set_pixels(&mut self, pixels: &engine::Bitmap, pos: &engine::Position, safe: bool) -> Result<bool, BoardError> {
+        for y in 0..pixels.data.cols {
+            for x in 0..pixels.data.rows {
+                if safe && self.screen.data[engine::Position { x: (x+pos.x), y: (y+pos.y) }] != self.screen.background {
+                    return Err(BoardError.PixelOccupied)
+                }
+                self.screen.data[engine::Position { x: (x+pos.x), y: (y+pos.y) }] = pixels.data[engine::Position { x: x, y: y }]
+            }
+
+        }
+        return Ok(false)
+    }
+
     // Brute-force rescan of entire board (or maybe rescan just Sprites)
     // Pixels occupied by a Sprite are colored fg, and rest bg
     //
@@ -81,8 +101,19 @@ impl Board {
     // TODO Better idea in future is to only look at positions that
     //  a Sprite previously occupied
     pub fn update(&mut self) {
-        self.screen.reset()
+        self.screen.reset();
+        
+        for sprite in self.sprites.iter() {
+            self.set_pixels(&sprite.pixels, &sprite.pos, true).expect("Failed to update board");
+        }
         // TODO update stuff
+    }
+
+
+
+    // TODO Detect sprite position conflicts?
+    pub fn add_sprite(&mut self, newsprite: Sprite) {
+        self.sprites.push(newsprite);
     }
 }
 

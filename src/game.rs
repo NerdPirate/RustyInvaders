@@ -40,6 +40,14 @@ impl Sprite {
         let data = fs::read_to_string(path).expect("Could not read Sprite file");
         Sprite::build_from_str(&data)
     }
+
+    pub fn get_pixels(&self) -> &engine::Bitmap {
+        &self.pixels 
+    }
+
+    pub fn get_pos(&self) -> &engine::Position {
+        &self.pos
+    }
 }
 
 impl fmt::Display for Sprite {
@@ -81,19 +89,6 @@ impl Board {
         Board::build_from_str(&data)
     }
 
-    pub fn set_pixels(&mut self, pixels: &engine::Bitmap, pos: &engine::Position, safe: bool) -> Result<bool, BoardError> {
-        for y in 0..pixels.data.cols {
-            for x in 0..pixels.data.rows {
-                if safe && self.screen.data[engine::Position { x: (x+pos.x), y: (y+pos.y) }] != self.screen.background {
-                    return Err(BoardError.PixelOccupied)
-                }
-                self.screen.data[engine::Position { x: (x+pos.x), y: (y+pos.y) }] = pixels.data[engine::Position { x: x, y: y }]
-            }
-
-        }
-        return Ok(false)
-    }
-
     // Brute-force rescan of entire board (or maybe rescan just Sprites)
     // Pixels occupied by a Sprite are colored fg, and rest bg
     //
@@ -103,15 +98,29 @@ impl Board {
     pub fn update(&mut self) {
         self.screen.reset();
         
-        for sprite in self.sprites.iter() {
-            self.set_pixels(&sprite.pixels, &sprite.pos, true).expect("Failed to update board");
+        for sprite in &self.sprites {
+            for y in 0..sprite.pixels.get_data().get_rows() {
+                for x in 0..sprite.pixels.get_data().get_cols() {
+                    println!("y = {}, x = {}", y, x);
+                    if self.screen.get_data()[engine::Position { x: (x+sprite.get_pos().get_x()), y: (y+sprite.get_pos().get_y()) }] != self.screen.get_bg() {
+                        panic!("Failed to update board")
+                    }
+                    self.screen.get_data_mut()[engine::Position { x: (x+sprite.get_pos().get_x()), y: (y+sprite.get_pos().get_y()) }] = sprite.pixels.get_data()[engine::Position { x: x, y: y }]
+                }
+
+            }
         }
+
         // TODO update stuff
     }
 
 
 
     // TODO Detect sprite position conflicts?
+    // Make a new bitmap for each, starting at the same upperleft and going to same bottom right
+    // Sprite FG positions copied in?
+    // Then iterate 1 bitmap and check other bitmap?
+    // Or just convert using math. Probably way faster but easier to get wrong.
     pub fn add_sprite(&mut self, newsprite: Sprite) {
         self.sprites.push(newsprite);
     }

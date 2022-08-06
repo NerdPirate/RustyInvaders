@@ -157,12 +157,24 @@ impl Bitmap {
         &self.data
     }
 
+    pub fn get_data_mut(&mut self) -> &mut Array2D<u8> {
+        &mut self.data
+    }
+
     pub fn get_fg(&self) -> u8 {
         self.foreground
     }
 
+    pub fn get_fg_mut(&mut self) -> &mut u8 {
+        &mut self.foreground
+    }
+
     pub fn get_bg(&self) -> u8 {
         self.background
+    }
+
+    pub fn get_bg_mut(&mut self) -> &mut u8 {
+        &mut self.background
     }
 
     // Naive implementation of setting all positions to bg value

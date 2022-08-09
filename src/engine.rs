@@ -17,7 +17,7 @@ use serde_json::Value;
 /// Represents position on the game board
 ///
 /// 0, 0 are the x, y coordinates indicating the top-leftmost position
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -31,6 +31,15 @@ impl Position {
     pub fn get_y(&self) -> usize {
         self.y
     }
+}
+
+/// Represents a rectangle, often used to define bounds
+///
+/// 0, 0 are the x, y coordinates indicating the top-leftmost position
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+pub struct Rectangle {
+    pub top_left: Position,
+    pub bottom_right: Position,
 }
 
 /// A simple 2d array
@@ -175,6 +184,14 @@ impl Bitmap {
 
     pub fn get_bg_mut(&mut self) -> &mut u8 {
         &mut self.background
+    }
+
+    pub fn get_rows(&self) -> usize {
+        self.data.get_rows()
+    }
+
+    pub fn get_cols(&self) -> usize {
+        self.data.get_cols()
     }
 
     // Naive implementation of setting all positions to bg value

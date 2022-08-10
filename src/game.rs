@@ -120,6 +120,7 @@ impl Sprite {
 
             for common_y in *common_start_y..=*common_end_y {
                 for common_x in *common_start_x..=*common_end_x {
+                    // Find only foreground-colored pixels, since background doesn't intersect
                     let self_pixel = self.get_pixel_at(&engine::Position{ x: common_x, y: common_y });
                     let other_pixel = other.get_pixel_at(&engine::Position{ x: common_x, y: common_y });
                     let both_fg = match (self_pixel, other_pixel) {
@@ -141,6 +142,13 @@ impl fmt::Display for Sprite {
         self.pixels.fmt(f)
     }
 }
+
+impl Movable for Sprite {
+    fn game_move(&self, _next_pos: engine::Position) -> Result<(), BoardError> {
+        Ok(())
+    }
+}
+
 
 #[derive(Debug)]
 pub enum BoardError {
@@ -212,12 +220,10 @@ impl Board {
         if self.sprites.len() > 0 {
             for sprite in self.sprites.iter() {
                 if sprite.intersect(&newsprite) {
-                    println!("REJECTED!");
-                    return
+                    panic!("Position conflict! Cannot add a sprite to the board.");
                 }
             }
         }
-        println!("Adding");
         self.sprites.push(newsprite);
     }
 }
@@ -227,6 +233,27 @@ impl fmt::Display for Board {
         self.screen.fmt(f)
     }
 }
+
+
+pub trait Movable {
+    fn game_move(&self, next_pos: engine::Position) -> Result<(), BoardError>;
+}
+
+// Represents a game unit and the requested move
+// Game units must implement the Movable trait to make a Move
+pub struct Move<'a> {
+    unit: &'a dyn Movable,
+    next_pos: engine::Position,
+}
+
+
+// Represents the game including the board, score, move requests
+pub struct Game<'a> {
+    board: Board,
+    moves: Vec<Move<'a>>,
+    score: usize,
+}
+
 
 #[cfg(test)]
 mod tests {

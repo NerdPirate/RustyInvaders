@@ -196,10 +196,12 @@ impl Board {
             for y in 0..sprite.pixels.get_data().get_rows() {
                 for x in 0..sprite.pixels.get_data().get_cols() {
                     println!("y = {}, x = {}", y, x);
-                    if self.screen.get_data()[engine::Position { x: (x+sprite.get_pos().get_x()), y: (y+sprite.get_pos().get_y()) }] != self.screen.get_bg() {
+                    let screen_pos = engine::Position { x: (x+sprite.get_pos().get_x()), y: (y+sprite.get_pos().get_y()) };
+                    // TODO Do we need to check this, or is the sprite intersect check sufficient?
+                    if self.screen.get_data()[screen_pos] != self.screen.get_bg() {
                         panic!("Failed to update board")
                     }
-                    self.screen.get_data_mut()[engine::Position { x: (x+sprite.get_pos().get_x()), y: (y+sprite.get_pos().get_y()) }] = sprite.pixels.get_data()[engine::Position { x: x, y: y }]
+                    self.screen.get_data_mut()[screen_pos] = sprite.pixels.get_data()[engine::Position { x: x, y: y }]
                 }
 
             }
@@ -541,6 +543,16 @@ mod tests {
 
     #[test]
     fn test_board_update() {
+        // TODO More asserts
+    }
+
+    #[test]
+    fn test_move() {
+        // TODO More asserts
+    }
+
+    #[test]
+    fn test_game_move() {
         // TODO More asserts
     }
 }
